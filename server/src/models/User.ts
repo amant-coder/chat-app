@@ -72,7 +72,7 @@ const userSchema = new Schema<IUserDocument>(
 // Index for search (automatically created by unique: true)
 
 // Hash password before saving
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function (this: any, next) {
   if (!this.isModified('password')) return next();
   
   try {
@@ -90,9 +90,8 @@ userSchema.methods.comparePassword = async function (candidatePassword: string):
 };
 
 // Generate default avatar if not set
-userSchema.pre('save', function (next) {
+userSchema.pre('save', function (this: any, next) {
   if (!this.avatar) {
-    const hash = require('crypto').createHash('md5').update(this.username).digest('hex');
     this.avatar = `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(this.username)}`;
   }
   next();

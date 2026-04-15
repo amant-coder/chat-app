@@ -12,7 +12,8 @@ class UploadService {
     try {
       // Determine resource type based on mime
       const isImage = file.mimetype.startsWith('image/');
-      const resourceType = isImage ? 'image' : 'raw';
+      const isVideo = file.mimetype.startsWith('video/');
+      const resourceType = isImage ? 'image' : isVideo ? 'video' : 'raw';
 
       // Upload to Cloudinary
       const result = await new Promise<any>((resolve, reject) => {

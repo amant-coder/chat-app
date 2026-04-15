@@ -24,8 +24,8 @@ class MessageService {
       throw new AppError('Conversation not found or access denied.', 404);
     }
 
-    // Sanitize message content
-    const sanitizedContent = sanitizeMessage(content);
+    // Sanitize message content (skip for E2EE messages — base64 payloads would be corrupted)
+    const sanitizedContent = e2eData?.iv ? content : sanitizeMessage(content);
 
     if (!sanitizedContent && type === 'text') {
       throw new AppError('Message content cannot be empty.', 400);

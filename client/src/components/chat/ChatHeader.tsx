@@ -20,18 +20,31 @@ export default function ChatHeader() {
   return (
     <div className="h-16 flex items-center justify-between px-4 border-b border-(--border) bg-(--bg-secondary)/80 backdrop-blur-xl">
       <div className="flex items-center gap-3">
-        {/* Mobile back button */}
-        <button
-          onClick={() => {
-            useChatStore.getState().setActiveConversation(null);
-            setSidebarOpen(true);
-          }}
-          className="md:hidden p-2 -ml-2 rounded-xl hover:bg-(--bg-hover) transition-colors"
-        >
-          <svg className="w-5 h-5 text-(--text-secondary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+        {/* Mobile menu and back buttons */}
+        <div className="flex items-center md:hidden -ml-2">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-xl hover:bg-(--bg-hover) transition-colors"
+            aria-label="Toggle menu"
+          >
+            <svg className="w-5 h-5 text-(--text-secondary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+          </button>
+          
+          <button
+            onClick={() => {
+              useChatStore.getState().setActiveConversation(null);
+            }}
+            className="p-2 rounded-xl hover:bg-(--bg-hover) transition-colors"
+            aria-label="Back to conversations"
+            title="Back to conversations"
+          >
+            <svg className="w-5 h-5 text-(--text-secondary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        </div>
 
         {/* Avatar */}
         <div className="relative">

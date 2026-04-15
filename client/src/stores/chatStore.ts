@@ -263,35 +263,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
         if (tempId) {
         // Replace optimistic message with server-confirmed one
         updated = existing.map((m) =>
-          m.tempId === tempId ? { ...message, pending: false } : m
+          m.tempId === tempId ? { ...decryptedMsg, pending: false } : m
         );
         // If no match found, append (shouldn't happen usually)
-        if (!updated.find((m) => m._id === message._id)) {
-          updated = [...existing.filter((m) => m.tempId !== tempId), message];
+        if (!updated.find((m) => m._id === decryptedMsg._id)) {
+          updated = [...existing.filter((m) => m.tempId !== tempId), decryptedMsg];
         }
       } else {
         // Check for duplicates
-        if (existing.find((m) => m._id === message._id)) {
+        if (existing.find((m) => m._id === decryptedMsg._id)) {
           return state;
         }
-        updated = [...existing, message];
+        updated = [...existing, decryptedMsg];
       }
 
       // Update conversation's lastMessage and reorder
       const updatedConversations = state.conversations.map((conv) => {
         if (conv._id === convId) {
-          const senderInfo = typeof message.sender === 'string'
-            ? message.sender
-            : message.sender._id;
+          const senderInfo = typeof decryptedMsg.sender === 'string'
+            ? decryptedMsg.sender
+            : decryptedMsg.sender._id;
           return {
             ...conv,
             lastMessage: {
-              content: message.content,
+              content: decryptedMsg.content,
               sender: senderInfo,
-              timestamp: message.createdAt,
-              type: message.type,
+              timestamp: decryptedMsg.createdAt,
+              type: decryptedMsg.type,
             },
-            updatedAt: message.createdAt,
+            updatedAt: decryptedMsg.createdAt,
             unreadCount: state.activeConversation?._id === convId
               ? conv.unreadCount
               : conv.unreadCount + 1,

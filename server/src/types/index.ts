@@ -12,6 +12,8 @@ export interface IUser {
   publicKey?: string;
   encryptedPrivateKey?: string;
   keySalt?: string;
+  passwordResetOTP?: string;
+  passwordResetExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;

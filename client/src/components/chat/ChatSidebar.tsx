@@ -37,7 +37,7 @@ export default function ChatSidebar() {
       <div className="p-4 border-b border-(--border)">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold text-gradient">Pulse</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setUserSearchOpen(true)}
               className="p-2 rounded-xl hover:bg-(--bg-hover) transition-colors"
@@ -56,6 +56,17 @@ export default function ChatSidebar() {
             >
               <svg className="w-5 h-5 text-(--text-secondary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+            
+            {/* Mobile close button */}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="md:hidden p-2 rounded-xl hover:bg-(--bg-hover) transition-colors ml-1"
+              aria-label="Close sidebar"
+            >
+              <svg className="w-6 h-6 text-(--text-muted) transition-transform active:rotate-90 duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>

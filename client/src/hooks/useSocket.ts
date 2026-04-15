@@ -13,14 +13,13 @@ export const useSocket = () => {
   const setTyping = useChatStore((s) => s.setTyping);
   const updateUserStatus = useChatStore((s) => s.updateUserStatus);
   const setConnected = useUIStore((s) => s.setConnected);
-  const initialized = useRef(false);
+  const activeSocket = useRef<any>(null);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
     const socket = getSocket();
-    if (!socket) return;
+    if (!socket || activeSocket.current === socket) return;
+
+    activeSocket.current = socket;
 
     const handleConnect = () => setConnected(true);
     const handleDisconnect = () => setConnected(false);
@@ -63,7 +62,7 @@ export const useSocket = () => {
       socket.off('message:read:update', handleReadUpdate);
       socket.off('typing:update', handleTypingUpdate);
       socket.off('user:status', handleUserStatus);
-      initialized.current = false;
+      activeSocket.current = null;
     };
   }, []);
 };

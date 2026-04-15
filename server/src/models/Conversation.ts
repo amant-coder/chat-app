@@ -23,7 +23,7 @@ const conversationSchema = new Schema<IConversationDocument>(
       timestamp: Date,
       type: {
         type: String,
-        enum: ['text', 'image', 'file'],
+        enum: ['text', 'image', 'file', 'video'],
         default: 'text',
       },
     },

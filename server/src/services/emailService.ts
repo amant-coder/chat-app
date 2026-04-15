@@ -1,30 +1,17 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: env.SMTP_EMAIL,
-    pass: env.SMTP_APP_PASSWORD,
-  },
-});
-
-// Verify connection on startup
-transporter.verify().then(() => {
-  logger.info('📧 SMTP connection verified');
-}).catch((err) => {
-  logger.warn('📧 SMTP connection failed — emails will not be sent:', err.message);
-});
+const resend = new Resend(env.RESEND_API_KEY);
 
 class EmailService {
-  private from = `"Pulse Chat" <${env.SMTP_EMAIL}>`;
+  private from = env.RESEND_FROM_EMAIL;
 
   async sendWelcomeEmail(email: string, username: string): Promise<void> {
     try {
-      await transporter.sendMail({
+      const { data, error } = await resend.emails.send({
         from: this.from,
-        to: email,
+        to: [email],
         subject: '🎉 Welcome to Pulse Chat!',
         html: `
 <!DOCTYPE html>
@@ -92,7 +79,13 @@ class EmailService {
 </body>
 </html>`,
       });
-      logger.info(`Welcome email sent to ${email}`);
+
+      if (error) {
+        logger.error('Failed to send welcome email:', error);
+        return;
+      }
+
+      logger.info(`Welcome email sent to ${email} (id: ${data?.id})`);
     } catch (error) {
       logger.error('Failed to send welcome email:', error);
       // Don't throw — welcome email failure shouldn't block registration
@@ -101,9 +94,9 @@ class EmailService {
 
   async sendPasswordResetEmail(email: string, username: string, otpCode: string): Promise<void> {
     try {
-      await transporter.sendMail({
+      const { data, error } = await resend.emails.send({
         from: this.from,
-        to: email,
+        to: [email],
         subject: '🔐 Pulse Chat — Password Reset Code',
         html: `
 <!DOCTYPE html>
@@ -143,7 +136,7 @@ class EmailService {
         </p>
       </div>
 
-      <div style="background:#ff7675/10;border:1px solid rgba(255,118,117,0.2);border-radius:10px;padding:14px 16px;">
+      <div style="background:rgba(255,118,117,0.1);border:1px solid rgba(255,118,117,0.2);border-radius:10px;padding:14px 16px;">
         <p style="color:#ff7675;font-size:13px;margin:0;line-height:1.5;">
           ⚠️ If you did not request this, please ignore this email. Your password will remain unchanged.
         </p>
@@ -159,7 +152,13 @@ class EmailService {
 </body>
 </html>`,
       });
-      logger.info(`Password reset email sent to ${email}`);
+
+      if (error) {
+        logger.error('Failed to send password reset email:', error);
+        throw new Error(`Resend API error: ${error.message}`);
+      }
+
+      logger.info(`Password reset email sent to ${email} (id: ${data?.id})`);
     } catch (error) {
       logger.error('Failed to send password reset email:', error);
       throw error; // Throw here — if we can't send the email, the reset fails

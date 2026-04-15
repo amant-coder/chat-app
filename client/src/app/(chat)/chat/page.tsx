@@ -62,11 +62,12 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Mobile: Fixed drawer with glassmorphism, Desktop: Relative panel */}
       <div
         className={`${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed md:relative md:translate-x-0 z-40 h-full transition-transform duration-300 ease-in-out`}
+        } fixed md:relative md:translate-x-0 z-40 w-[280px] sm:w-80 h-full transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+        bg-(--bg-secondary)/95 backdrop-blur-2xl md:bg-(--bg-secondary) md:backdrop-blur-none shadow-2xl md:shadow-none border-r border-(--border)`}
       >
         <ChatSidebar />
       </div>
@@ -80,23 +81,47 @@ export default function ChatPage() {
       )}
 
       {/* Chat area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full relative">
+        {/* Mobile-only header when no chat is active */}
+        {!activeConversation && (
+          <div className="md:hidden flex items-center justify-between px-4 h-16 border-b border-(--border) bg-(--bg-secondary)/80 backdrop-blur-xl">
+            <h1 className="text-xl font-bold text-gradient">Pulse</h1>
+            <button
+              onClick={() => useUIStore.getState().setSidebarOpen(true)}
+              className="p-2.5 rounded-2xl bg-(--bg-tertiary) hover:bg-(--bg-hover) text-(--text-primary) transition-all active:scale-95 shadow-lg shadow-black/10 border border-(--border)"
+              aria-label="Open Menu"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         {activeConversation ? (
           <ChatWindow />
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-(--bg-tertiary) mb-6">
-                <svg className="w-10 h-10 text-(--text-muted)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="flex-1 flex items-center justify-center p-6 bg-radial-gradient">
+            <div className="text-center max-w-sm">
+              <div className="relative inline-flex items-center justify-center w-24 h-24 rounded-[2rem] bg-gradient-to-br from-(--accent)/20 to-(--accent-secondary)/20 mb-8 group cursor-default">
+                <div className="absolute inset-0 bg-(--accent) opacity-0 group-hover:opacity-10 rounded-[2rem] transition-opacity duration-500 blur-xl" />
+                <svg className="w-12 h-12 text-(--accent) relative z-10 transition-transform duration-500 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-(--text-primary) mb-2">
+              <h2 className="text-2xl font-bold text-(--text-primary) mb-3 tracking-tight">
                 Welcome to Pulse Chat
               </h2>
-              <p className="text-(--text-secondary) max-w-md">
-                Select a conversation from the sidebar or start a new one to begin chatting.
+              <p className="text-(--text-secondary) leading-relaxed">
+                Connect with your friends and start encrypted conversations. Select a chat from the sidebar to begin.
               </p>
+              
+              <button
+                onClick={() => useUIStore.getState().setSidebarOpen(true)}
+                className="mt-8 md:hidden px-6 py-3 rounded-2xl bg-(--accent) text-white font-semibold shadow-lg shadow-(--accent)/20 hover:shadow-(--accent)/30 transition-all active:scale-95"
+              >
+                View Conversations
+              </button>
             </div>
           </div>
         )}

@@ -14,9 +14,9 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().min(1, 'CLOUDINARY_CLOUD_NAME is required'),
   CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY is required'),
   CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET is required'),
-  SMTP_EMAIL: z.string().min(1, 'SMTP_EMAIL is required'),
-  SMTP_APP_PASSWORD: z.string().min(1, 'SMTP_APP_PASSWORD is required'),
-  CLIENT_URL: z.string().default('http://localhost:3000'),
+  RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
+  RESEND_FROM_EMAIL: z.string().default('Pulse Chat <onboarding@resend.dev>'),
+  CLIENT_URL: z.string().default('http://localhost:3006'),
 });
 
 const parsed = envSchema.safeParse(process.env);

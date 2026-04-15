@@ -2,7 +2,7 @@ import { Server } from 'socket.io';
 import { AuthenticatedSocket } from '../index';
 import { SendMessagePayload } from '../../types';
 import messageService from '../../services/messageService';
-import { emitToUser, getConversationRoom } from '../utils';
+import { emitToUser, getConversationRoom, isUserOnline } from '../utils';
 import Conversation from '../../models/Conversation';
 import { logger } from '../../utils/logger';
 import { sanitizeMessage } from '../../utils/sanitize';
@@ -79,7 +79,6 @@ export const setupMessageHandler = (io: Server, socket: AuthenticatedSocket): vo
         });
 
         // Send delivery confirmation to sender if recipient is online
-        const { isUserOnline } = require('../utils');
         if (isUserOnline(otherUserId)) {
           socket.emit('message:delivered', {
             messageId: message._id.toString(),
