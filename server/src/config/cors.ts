@@ -2,9 +2,8 @@ import cors from 'cors';
 import { env } from './env';
 
 export const corsOptions: cors.CorsOptions = {
-  origin: env.CLIENT_URL,
+  origin: env.CLIENT_URL.replace(/\/$/, ''),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 
-    'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
