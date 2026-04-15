@@ -1,7 +1,10 @@
 import axios from 'axios';
 import { disconnectSocket, updateSocketToken } from '@/lib/socket';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = rawApiUrl.startsWith('http') && !rawApiUrl.endsWith('/api') 
+  ? `${rawApiUrl.replace(/\/$/, '')}/api` 
+  : rawApiUrl;
 
 const api = axios.create({
   baseURL: API_URL,
