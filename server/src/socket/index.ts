@@ -2,6 +2,7 @@ import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import { allowedOrigins } from '../config/cors';
 import { JwtPayload } from '../types';
 import User from '../models/User';
 import { logger } from '../utils/logger';
@@ -21,7 +22,7 @@ export interface AuthenticatedSocket extends Socket {
 export const initializeSocket = (httpServer: HttpServer): Server => {
   const io = new Server(httpServer, {
     cors: {
-      origin: env.CLIENT_URL,
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true,
     },
