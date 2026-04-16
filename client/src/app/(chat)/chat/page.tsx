@@ -62,41 +62,20 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Sidebar - Mobile: Fixed drawer with glassmorphism, Desktop: Relative panel */}
+      {/* Sidebar */}
       <div
         className={`${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed md:relative md:translate-x-0 z-40 w-[280px] sm:w-80 h-full transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
-        bg-(--bg-secondary)/95 backdrop-blur-2xl md:bg-(--bg-secondary) md:backdrop-blur-none shadow-2xl md:shadow-none border-r border-(--border)`}
+          activeConversation ? 'hidden md:flex' : 'flex'
+        } w-full md:w-[320px] lg:w-[360px] xl:w-[400px] h-full flex-shrink-0 bg-(--bg-secondary) border-r border-(--border)`}
       >
         <ChatSidebar />
       </div>
 
-      {/* Sidebar overlay on mobile */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
-          onClick={() => useUIStore.getState().setSidebarOpen(false)}
-        />
-      )}
-
       {/* Chat area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full relative">
-        {/* Mobile-only header when no chat is active */}
-        {!activeConversation && (
-          <div className="md:hidden flex items-center justify-between px-4 h-16 border-b border-(--border) bg-(--bg-secondary)/80 backdrop-blur-xl">
-            <h1 className="text-xl font-bold text-gradient">Pulse</h1>
-            <button
-              onClick={() => useUIStore.getState().setSidebarOpen(true)}
-              className="p-2.5 rounded-2xl bg-(--bg-tertiary) hover:bg-(--bg-hover) text-(--text-primary) transition-all active:scale-95 shadow-lg shadow-black/10 border border-(--border)"
-              aria-label="Open Menu"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-              </svg>
-            </button>
-          </div>
-        )}
+      <div className={`${
+        !activeConversation ? 'hidden md:flex' : 'flex'
+      } flex-1 flex-col min-w-0 h-full relative bg-(--bg-primary)`}>
+
 
         {activeConversation ? (
           <ChatWindow />
@@ -116,12 +95,6 @@ export default function ChatPage() {
                 Connect with your friends and start encrypted conversations. Select a chat from the sidebar to begin.
               </p>
               
-              <button
-                onClick={() => useUIStore.getState().setSidebarOpen(true)}
-                className="mt-8 md:hidden px-6 py-3 rounded-2xl bg-(--accent) text-white font-semibold shadow-lg shadow-(--accent)/20 hover:shadow-(--accent)/30 transition-all active:scale-95"
-              >
-                View Conversations
-              </button>
             </div>
           </div>
         )}

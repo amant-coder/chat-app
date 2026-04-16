@@ -32,7 +32,7 @@ export default function ChatSidebar() {
   };
 
   return (
-    <div className="w-80 h-full flex flex-col bg-(--bg-secondary) border-r border-(--border)">
+    <div className="w-full h-full flex flex-col bg-(--bg-secondary)">
       {/* Header */}
       <div className="p-4 border-b border-(--border)">
         <div className="flex items-center justify-between mb-4">
@@ -59,16 +59,7 @@ export default function ChatSidebar() {
               </svg>
             </button>
             
-            {/* Mobile close button */}
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="md:hidden p-2 rounded-xl hover:bg-(--bg-hover) transition-colors ml-1"
-              aria-label="Close sidebar"
-            >
-              <svg className="w-6 h-6 text-(--text-muted) transition-transform active:rotate-90 duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+
           </div>
         </div>
 

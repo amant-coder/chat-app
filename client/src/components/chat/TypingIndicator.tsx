@@ -17,8 +17,13 @@ export default function TypingIndicator() {
   if (!isTyping) return null;
 
   return (
-    <div className="flex items-center gap-2 py-2 px-1 fade-in">
-      <div className="px-4 py-2.5 rounded-2xl rounded-bl-md bg-(--message-received) border border-(--border)">
+    <div className="flex items-end gap-2 py-2 px-1 fade-in mt-1">
+      <img
+        src={otherUser?.avatar || `https://api.dicebear.com/9.x/initials/svg?seed=${otherUser?.username}`}
+        alt={otherUser?.username}
+        className="w-7 h-7 rounded-full bg-(--bg-hover) shadow-sm shrink-0"
+      />
+      <div className="px-3 py-2.5 rounded-2xl rounded-bl-md bg-(--message-received) border border-(--border) shadow-md">
         <div className="typing-dots">
           <span></span>
           <span></span>

@@ -3,14 +3,14 @@
 import React from 'react';
 import { useChatStore } from '@/stores/chatStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useUIStore } from '@/stores/uiStore';
+
 import { formatLastSeen } from '@/lib/utils';
 
 export default function ChatHeader() {
   const activeConversation = useChatStore((s) => s.activeConversation);
   const typingUsers = useChatStore((s) => s.typingUsers);
   const currentUser = useAuthStore((s) => s.user);
-  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
+
 
   if (!activeConversation) return null;
 
@@ -20,27 +20,17 @@ export default function ChatHeader() {
   return (
     <div className="h-16 flex items-center justify-between px-4 border-b border-(--border) bg-(--bg-secondary)/80 backdrop-blur-xl">
       <div className="flex items-center gap-3">
-        {/* Mobile menu and back buttons */}
-        <div className="flex items-center md:hidden -ml-2">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-xl hover:bg-(--bg-hover) transition-colors"
-            aria-label="Toggle menu"
-          >
-            <svg className="w-5 h-5 text-(--text-secondary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-            </svg>
-          </button>
-          
+        {/* Back button (Mobile only) */}
+        <div className="flex items-center md:hidden -ml-2 mr-1">
           <button
             onClick={() => {
               useChatStore.getState().setActiveConversation(null);
             }}
-            className="p-2 rounded-xl hover:bg-(--bg-hover) transition-colors"
+            className="p-2 rounded-xl hover:bg-(--bg-hover) transition-colors text-(--text-secondary)"
             aria-label="Back to conversations"
             title="Back to conversations"
           >
-            <svg className="w-5 h-5 text-(--text-secondary)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
