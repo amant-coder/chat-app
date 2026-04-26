@@ -8,6 +8,8 @@ router.use(authenticate);
 
 router.get('/', chatController.getConversations);
 router.post('/', chatController.getOrCreateConversation);
+router.post('/groups', chatController.createGroup);
+router.post('/groups/:conversationId/participants', chatController.addGroupParticipant);
 router.get('/:conversationId', chatController.getConversation);
 
 export default router;

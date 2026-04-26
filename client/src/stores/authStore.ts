@@ -20,6 +20,7 @@ interface AuthState {
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loadUser: () => void;
+  setUser: (user: User) => void;
   clearError: () => void;
 }
 
@@ -35,13 +36,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data } = await api.post<AuthResponse>('/auth/login', { email, password });
 
       // Handle E2EE Keys
+      console.log('[Auth] Login successful, user data:', {
+        hasPrivateKey: !!data.user.encryptedPrivateKey,
+        hasSalt: !!data.user.keySalt,
+        publicKey: data.user.publicKey
+      });
+
       if (data.user.encryptedPrivateKey && data.user.keySalt) {
         try {
           const masterKey = await deriveMasterKey(password, data.user.keySalt);
           const { privateKeyJwk } = await decryptPrivateKey(data.user.encryptedPrivateKey, masterKey);
           localStorage.setItem('e2e_private_key', JSON.stringify(privateKeyJwk));
+          console.log('[Auth] Private key decrypted and stored.');
         } catch (err) {
-          console.error("Failed to decrypt private key", err);
+          console.error("[Auth] Failed to decrypt private key", err);
         }
       }
 
@@ -143,6 +151,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } else {
       set({ isLoading: false });
     }
+  },
+
+  setUser: (user: User) => {
+    localStorage.setItem('user', JSON.stringify(user));
+    set({ user });
   },
 
   clearError: () => set({ error: null }),

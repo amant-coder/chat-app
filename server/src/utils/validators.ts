@@ -31,3 +31,11 @@ export const resetPasswordSchema = z.object({
     newPassword: z.string().min(6),
   }),
 });
+
+export const updateProfileSchema = z.object({
+  body: z.object({
+    bio: z.string().max(160).optional(),
+    statusMessage: z.string().max(50).optional(),
+    avatar: z.string().url().optional().or(z.string().length(0)),
+  }),
+});

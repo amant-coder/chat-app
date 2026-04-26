@@ -57,13 +57,12 @@ export const setupMessageHandler = (io: Server, socket: AuthenticatedSocket): vo
         { senderEncryptedKey, recipientEncryptedKey, iv }
       );
 
-      // Get the conversation to find the other participant
-      const conversation = await Conversation.findById(conversationId);
+      // Get the conversation to find participants
+      const conversation = await Conversation.findById(conversationId).populate('participants', 'username email avatar status lastSeen');
       if (!conversation) return;
 
-      const otherUserId = conversation.participants
-        .find((p) => p.toString() !== socket.userId)
-        ?.toString();
+      // Prepare conversation object for sidebar update (with unread count)
+      const convData = conversation.toObject();
 
       // Emit to the sender (confirmation with tempId for optimistic UI)
       socket.emit('message:received', {
@@ -71,21 +70,31 @@ export const setupMessageHandler = (io: Server, socket: AuthenticatedSocket): vo
         tempId,
       });
 
-      // Emit to the other participant
-      if (otherUserId) {
-        emitToUser(io, otherUserId, 'message:received', {
+      // Emit to all participants
+      conversation.participants.forEach((participant: any) => {
+        const participantId = participant._id.toString();
+        if (participantId === socket.userId) return;
+
+        // Emit message
+        emitToUser(io, participantId, 'message:received', {
           message: message.toObject(),
           tempId: null,
         });
 
-        // Send delivery confirmation to sender if recipient is online
-        if (isUserOnline(otherUserId)) {
+        // Emit conversation update for sidebar (important for new conversations)
+        emitToUser(io, participantId, 'conversation:update', {
+          ...convData,
+          unreadCount: 1, // At least this message is unread
+        });
+
+        // Send delivery confirmation to sender if participant is online
+        if (isUserOnline(participantId)) {
           socket.emit('message:delivered', {
             messageId: message._id.toString(),
             conversationId,
           });
         }
-      }
+      });
 
       logger.debug(`Message sent in ${conversationId} by ${socket.userId}`);
     } catch (error) {

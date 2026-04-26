@@ -7,12 +7,16 @@ import { useUIStore } from '@/stores/uiStore';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatWindow from '@/components/chat/ChatWindow';
 import UserSearchModal from '@/components/chat/UserSearchModal';
+import ProfileModal from '@/components/chat/ProfileModal';
+import GroupCreateModal from '@/components/chat/GroupCreateModal';
 
 export default function ChatPage() {
   const { user, isLoading } = useAuth(true);
   const fetchConversations = useChatStore((s) => s.fetchConversations);
   const activeConversation = useChatStore((s) => s.activeConversation);
   const isUserSearchOpen = useUIStore((s) => s.isUserSearchOpen);
+  const isProfileOpen = useUIStore((s) => s.isProfileOpen);
+  const isGroupCreateOpen = useUIStore((s) => s.isGroupCreateOpen);
   const isSidebarOpen = useUIStore((s) => s.isSidebarOpen);
   const isConnected = useUIStore((s) => s.isConnected);
 
@@ -100,8 +104,10 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* User Search Modal */}
+      {/* Modals */}
       {isUserSearchOpen && <UserSearchModal />}
+      {isProfileOpen && <ProfileModal />}
+      {isGroupCreateOpen && <GroupCreateModal />}
     </div>
   );
 }

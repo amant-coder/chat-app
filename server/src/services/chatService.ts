@@ -60,12 +60,62 @@ class ChatService {
     const conversation = await Conversation.findOne({
       _id: conversationId,
       participants: userId,
-    }).populate('participants', 'username email avatar status lastSeen');
+    }).populate('participants', 'username email avatar status lastSeen bio statusMessage');
 
     if (!conversation) {
       throw new AppError('Conversation not found.', 404);
     }
 
+    return conversation;
+  }
+
+  async createGroupConversation(
+    creatorId: string,
+    name: string,
+    participantIds: string[],
+    description?: string
+  ) {
+    if (!name || name.trim().length === 0) {
+      throw new AppError('Group name is required.', 400);
+    }
+
+    // Always include creator in participants
+    const allParticipants = [...new Set([creatorId, ...participantIds])];
+
+    const conversation = await Conversation.create({
+      type: 'group',
+      participants: allParticipants,
+      name: name.trim(),
+      description: description?.trim() || '',
+      admins: [creatorId],
+    });
+
+    await conversation.populate('participants', 'username email avatar status lastSeen bio statusMessage');
+    return conversation;
+  }
+
+  async addGroupParticipant(conversationId: string, adminId: string, newParticipantId: string) {
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      type: 'group',
+    });
+
+    if (!conversation) {
+      throw new AppError('Group conversation not found.', 404);
+    }
+
+    if (!conversation.admins?.map((id: any) => id.toString()).includes(adminId)) {
+      throw new AppError('Only group admins can add participants.', 403);
+    }
+
+    if (conversation.participants.map((id: any) => id.toString()).includes(newParticipantId)) {
+      throw new AppError('User is already a participant in this group.', 400);
+    }
+
+    conversation.participants.push(new mongoose.Types.ObjectId(newParticipantId));
+    await conversation.save();
+
+    await conversation.populate('participants', 'username email avatar status lastSeen bio statusMessage');
     return conversation;
   }
 }

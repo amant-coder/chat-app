@@ -10,6 +10,13 @@ Add a secure forgot-password flow with email-based OTP reset, and send a styled 
 > [!IMPORTANT]
 > **Reset flow**: I'm proposing a **6-digit OTP code** sent to the user's email (not a URL link). The user enters their email → receives a code → enters code + new password. This is simpler, more mobile-friendly, and avoids needing a publicly accessible server URL. Good?
 
+
+Please check your browser's address bar carefully and make sure the CLIENT_URL on Render matches it exactly. A dot vs hyphen mismatch would cause the CORS check to fail silently.
+
+After the manual redeploy, if it still fails, open your browser DevTools → Network tab → click the failed request → look at the Response Headers and share what you see — that will tell us exactly what the server is returning.
+
+
+
 ## Proposed Changes
 
 ### Server: Email Service (new)

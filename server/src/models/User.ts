@@ -63,6 +63,16 @@ const userSchema = new Schema<IUserDocument>(
       type: Date,
       select: false,
     },
+    bio: {
+      type: String,
+      maxlength: [160, 'Bio cannot exceed 160 characters'],
+      default: '',
+    },
+    statusMessage: {
+      type: String,
+      maxlength: [50, 'Status message cannot exceed 50 characters'],
+      default: '',
+    },
   },
   {
     timestamps: true,

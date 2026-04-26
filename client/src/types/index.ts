@@ -7,13 +7,20 @@ export interface User {
   avatar: string;
   status: 'online' | 'offline';
   lastSeen: string;
+  bio?: string;
+  statusMessage?: string;
   publicKey?: string;
   encryptedPrivateKey?: string;
   keySalt?: string;
 }
 
-export type MessageType = 'text' | 'image' | 'file' | 'video';
+export type MessageType = 'text' | 'image' | 'file' | 'video' | 'voice';
 export type MessageStatus = 'sent' | 'delivered' | 'read';
+
+export interface Reaction {
+  emoji: string;
+  users: string[];
+}
 
 export interface Message {
   _id: string;
@@ -29,6 +36,8 @@ export interface Message {
   fileSize?: number;
   status: MessageStatus;
   readBy: Array<{ user: string; readAt: string }>;
+  isPinned?: boolean;
+  reactions?: Reaction[];
   createdAt: string;
   updatedAt?: string;
   // Optimistic UI
@@ -39,8 +48,12 @@ export interface Message {
 
 export interface Conversation {
   _id: string;
-  type: 'direct';
+  type: 'direct' | 'group';
   participants: User[];
+  name?: string;
+  avatar?: string;
+  description?: string;
+  admins?: string[];
   lastMessage?: {
     content: string;
     sender: string;

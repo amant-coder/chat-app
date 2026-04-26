@@ -21,6 +21,26 @@ export const generateRSAKeyPair = async () => {
   return { publicKeyJwk, privateKeyJwk, keyPair };
 };
 
+// --- Helper: Robust Base64 Conversion ---
+export const uint8ArrayToBase64 = (array: Uint8Array): string => {
+  let binary = '';
+  const len = array.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(array[i]);
+  }
+  return window.btoa(binary);
+};
+
+export const base64ToUint8Array = (base64: string): Uint8Array => {
+  const binaryString = window.atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+};
+
 // --- 2. Master Key Derivation (PBKDF2) ---
 export const deriveMasterKey = async (password: string, saltString: string) => {
   const encoder = new TextEncoder();
@@ -32,12 +52,17 @@ export const deriveMasterKey = async (password: string, saltString: string) => {
     ['deriveKey']
   );
 
-  const saltByteArray = Uint8Array.from(atob(saltString), c => c.charCodeAt(0));
+  const saltByteArray = base64ToUint8Array(saltString);
+
+  console.log('[Crypto] Deriving master key:', {
+    saltString,
+    saltLength: saltByteArray.length,
+  });
 
   const masterKey = await window.crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt: saltByteArray,
+      salt: saltByteArray as any,
       iterations: 100000,
       hash: 'SHA-256',
     },
@@ -54,7 +79,7 @@ export const deriveMasterKey = async (password: string, saltString: string) => {
 export const generateSalt = () => {
   const array = new Uint8Array(16);
   window.crypto.getRandomValues(array);
-  return btoa(String.fromCharCode(...array));
+  return uint8ArrayToBase64(array);
 };
 
 // --- 3. Key Escrow (Encrypt / Decrypt Private Key) ---
@@ -74,33 +99,45 @@ export const encryptPrivateKey = async (privateKeyJwk: JsonWebKey, masterKey: Cr
   combined.set(iv);
   combined.set(encryptedArray, iv.length);
 
-  return btoa(String.fromCharCode(...combined));
+  return uint8ArrayToBase64(combined);
 };
 
 export const decryptPrivateKey = async (encryptedPrivateKeyStr: string, masterKey: CryptoKey) => {
-  const combined = Uint8Array.from(atob(encryptedPrivateKeyStr), c => c.charCodeAt(0));
-  const iv = combined.slice(0, 12);
-  const data = combined.slice(12);
+  try {
+    const combined = base64ToUint8Array(encryptedPrivateKeyStr);
+    const iv = combined.slice(0, 12);
+    const data = combined.slice(12);
 
-  const decrypted = await window.crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
-    masterKey,
-    data
-  );
+    console.log('[Crypto] Decrypting private key:', {
+      combinedLength: combined.length,
+      ivLength: iv.length,
+      dataLength: data.length,
+      masterKey
+    });
 
-  const decoder = new TextDecoder();
-  const privateKeyJwk = JSON.parse(decoder.decode(decrypted)) as JsonWebKey;
+    const decrypted = await window.crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      masterKey,
+      data
+    );
 
-  // Import it back into a CryptoKey
-  const privateKey = await window.crypto.subtle.importKey(
-    'jwk',
-    privateKeyJwk,
-    { name: 'RSA-OAEP', hash: 'SHA-256' },
-    true,
-    ['decrypt']
-  );
+    const decoder = new TextDecoder();
+    const privateKeyJwk = JSON.parse(decoder.decode(decrypted)) as JsonWebKey;
 
-  return { privateKeyJwk, privateKey };
+    // Import it back into a CryptoKey
+    const privateKey = await window.crypto.subtle.importKey(
+      'jwk',
+      privateKeyJwk,
+      { name: 'RSA-OAEP', hash: 'SHA-256' },
+      true,
+      ['decrypt']
+    );
+
+    return { privateKeyJwk, privateKey };
+  } catch (error) {
+    console.error('[Crypto] decryptPrivateKey failed:', error);
+    throw error;
+  }
 };
 
 // --- 4. Message Encryption (AES-GCM session key encrypted by RSA) ---
@@ -159,10 +196,10 @@ export const encryptMessage = async (
 
   // Convert to Base64 to store in MongoDB
   return {
-    content: btoa(String.fromCharCode(...new Uint8Array(encryptedContentBuffer))),
-    iv: btoa(String.fromCharCode(...iv)),
-    recipientEncryptedKey: btoa(String.fromCharCode(...new Uint8Array(recipientEncryptedKeyBuffer))),
-    senderEncryptedKey: btoa(String.fromCharCode(...new Uint8Array(senderEncryptedKeyBuffer))),
+    content: uint8ArrayToBase64(new Uint8Array(encryptedContentBuffer)),
+    iv: uint8ArrayToBase64(iv),
+    recipientEncryptedKey: uint8ArrayToBase64(new Uint8Array(recipientEncryptedKeyBuffer)),
+    senderEncryptedKey: uint8ArrayToBase64(new Uint8Array(senderEncryptedKeyBuffer)),
   };
 };
 
@@ -173,14 +210,14 @@ export const decryptMessage = async (
   myPrivateKey: CryptoKey
 ) => {
   // 1. Decrypt the session key using our RSA private key
-  const encryptedSessionKeyBuffer = Uint8Array.from(atob(encryptedSessionKeyBase64), c => c.charCodeAt(0));
+  const encryptedSessionKeyBuffer = base64ToUint8Array(encryptedSessionKeyBase64);
   
   let sessionKeyRaw;
   try {
     sessionKeyRaw = await window.crypto.subtle.decrypt(
       { name: 'RSA-OAEP' },
       myPrivateKey,
-      encryptedSessionKeyBuffer
+      encryptedSessionKeyBuffer as any
     );
   } catch (err) {
     console.error('Failed to decrypt session key', err);
@@ -196,14 +233,14 @@ export const decryptMessage = async (
   );
 
   // 2. Decrypt the message content using the session key
-  const encryptedContentBuffer = Uint8Array.from(atob(encryptedContentBase64), c => c.charCodeAt(0));
-  const ivBuffer = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
+  const encryptedContentBuffer = base64ToUint8Array(encryptedContentBase64);
+  const ivBuffer = base64ToUint8Array(ivBase64);
 
   try {
     const decryptedContentBuffer = await window.crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: ivBuffer },
+      { name: 'AES-GCM', iv: ivBuffer as any },
       sessionKey,
-      encryptedContentBuffer
+      encryptedContentBuffer as any
     );
 
     const decoder = new TextDecoder();

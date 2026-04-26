@@ -33,12 +33,16 @@ const messageSchema = new Schema<IMessageDocument>(
     },
     type: {
       type: String,
-      enum: ['text', 'image', 'file', 'video'],
+      enum: ['text', 'image', 'file', 'video', 'voice'],
       default: 'text',
     },
     fileUrl: String,
     fileName: String,
     fileSize: Number,
+    isPinned: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: ['sent', 'delivered', 'read'],
@@ -48,6 +52,12 @@ const messageSchema = new Schema<IMessageDocument>(
       {
         user: { type: Schema.Types.ObjectId, ref: 'User' },
         readAt: { type: Date, default: Date.now },
+      },
+    ],
+    reactions: [
+      {
+        emoji: { type: String, required: true },
+        users: [{ type: Schema.Types.ObjectId, ref: 'User' }],
       },
     ],
   },

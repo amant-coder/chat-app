@@ -130,6 +130,54 @@ class MessageService {
       }
     );
   }
+
+  async searchMessages(conversationId: string, userId: string, query: string) {
+    // Verify user is participant
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      participants: userId,
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found or access denied.', 404);
+    }
+
+    // Search messages in this conversation
+    // NOTE: For E2EE messages, searching content on the server won't yield results 
+    // because the content is encrypted. This search works for plaintext/system messages.
+    const messages = await Message.find({
+      conversation: conversationId,
+      content: { $regex: query, $options: 'i' },
+      type: 'text',
+    })
+      .populate('sender', 'username email avatar')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    return messages;
+  }
+
+  async togglePin(conversationId: string, userId: string, messageId: string) {
+    // Verify user is participant
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      participants: userId,
+    });
+
+    if (!conversation) {
+      throw new AppError('Conversation not found or access denied.', 404);
+    }
+
+    const message = await Message.findOne({ _id: messageId, conversation: conversationId });
+    if (!message) {
+      throw new AppError('Message not found.', 404);
+    }
+
+    message.isPinned = !message.isPinned;
+    await message.save();
+
+    return message;
+  }
 }
 
 export default new MessageService();

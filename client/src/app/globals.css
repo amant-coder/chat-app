@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @layer base {
+  /* ─── Dark Theme (default) ─────────────────────── */
   :root {
     --bg-primary: #0a0a0f;
     --bg-secondary: #12121a;
@@ -21,11 +22,47 @@
     --success: #00b894;
     --warning: #fdcb6e;
     --danger: #ff7675;
-    --online: #55efc4;
+    --online: #00b894;
     --message-sent: #6c5ce7;
     --message-received: #1e1e3a;
     --gradient-start: #6c5ce7;
     --gradient-end: #00cec9;
+    --reaction-bg: rgba(108, 92, 231, 0.12);
+    --reaction-border: rgba(108, 92, 231, 0.3);
+    --reaction-bg-mine: rgba(255,255,255,0.15);
+    --reaction-border-mine: rgba(255,255,255,0.3);
+  }
+
+  /* ─── Light Theme ──────────────────────────────── */
+  [data-theme="light"] {
+    --bg-primary: #f0f2f8;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #e8eaf2;
+    --bg-hover: #dde0ef;
+    --bg-active: #cdd0e5;
+    --surface: #ffffff;
+    --surface-hover: #f4f5fb;
+    --border: #d0d4e8;
+    --border-light: #b8bdd6;
+    --text-primary: #1a1a2e;
+    --text-secondary: #4a4a72;
+    --text-muted: #8080a8;
+    --accent: #6c5ce7;
+    --accent-hover: #5a4bd1;
+    --accent-glow: rgba(108, 92, 231, 0.2);
+    --accent-secondary: #00a8a5;
+    --success: #00a37a;
+    --warning: #e8a800;
+    --danger: #e05555;
+    --online: #00a37a;
+    --message-sent: #6c5ce7;
+    --message-received: #e8eaf2;
+    --gradient-start: #6c5ce7;
+    --gradient-end: #00cec9;
+    --reaction-bg: rgba(108, 92, 231, 0.1);
+    --reaction-border: rgba(108, 92, 231, 0.25);
+    --reaction-bg-mine: rgba(255,255,255,0.25);
+    --reaction-border-mine: rgba(255,255,255,0.4);
   }
 }
 
@@ -34,6 +71,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
 
   body {
@@ -42,6 +80,7 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   ::-webkit-scrollbar {

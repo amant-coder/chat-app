@@ -23,12 +23,12 @@ export const setupReadHandler = (io: Server, socket: AuthenticatedSocket): void 
       const conversation = await Conversation.findById(conversationId);
       if (!conversation) return;
 
-      const otherUserId = conversation.participants
-        .find((p) => p.toString() !== socket.userId)
-        ?.toString();
+      // Emit to all other participants
+      conversation.participants.forEach((participantId) => {
+        const pId = participantId.toString();
+        if (pId === socket.userId) return;
 
-      if (otherUserId) {
-        emitToUser(io, otherUserId, 'message:read:update', {
+        emitToUser(io, pId, 'message:read:update', {
           conversationId,
           messageIds,
           readBy: {
@@ -36,7 +36,7 @@ export const setupReadHandler = (io: Server, socket: AuthenticatedSocket): void 
             readAt: new Date(),
           },
         });
-      }
+      });
     } catch (error) {
       logger.error('Read handler error:', error);
     }

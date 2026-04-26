@@ -10,6 +10,7 @@ import { setupMessageHandler } from './handlers/messageHandler';
 import { setupTypingHandler } from './handlers/typingHandler';
 import { setupStatusHandler } from './handlers/statusHandler';
 import { setupReadHandler } from './handlers/readHandler';
+import { setupReactionHandler } from './handlers/reactionHandler';
 
 // Map of userId -> Set of socketIds (user can have multiple tabs)
 export const onlineUsers = new Map<string, Set<string>>();
@@ -81,6 +82,7 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
     setupTypingHandler(io, authSocket);
     setupStatusHandler(io, authSocket);
     setupReadHandler(io, authSocket);
+    setupReactionHandler(io, authSocket);
 
     // Handle disconnection
     socket.on('disconnect', async (reason) => {

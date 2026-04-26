@@ -45,6 +45,49 @@ class MessageController {
       next(error);
     }
   }
+
+  async searchMessages(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const conversationId = Array.isArray(req.params.conversationId)
+        ? req.params.conversationId[0]
+        : req.params.conversationId;
+      const { q } = req.query;
+
+      if (!q || typeof q !== 'string') {
+        res.status(400).json({ error: 'Search query "q" is required.' });
+        return;
+      }
+
+      const messages = await messageService.searchMessages(
+        conversationId,
+        req.user!.userId,
+        q
+      );
+
+      res.status(200).json({ messages });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async togglePin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const conversationId = Array.isArray(req.params.conversationId)
+        ? req.params.conversationId[0]
+        : req.params.conversationId;
+      const messageId = Array.isArray(req.params.messageId)
+        ? req.params.messageId[0]
+        : req.params.messageId;
+      const message = await messageService.togglePin(
+        conversationId,
+        req.user!.userId,
+        messageId
+      );
+      res.status(200).json(message);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new MessageController();

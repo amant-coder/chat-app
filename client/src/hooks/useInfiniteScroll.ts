@@ -27,7 +27,7 @@ export const useInfiniteScroll = (
         isLoading.current = false;
       });
     }
-  }, [onLoadMore, hasMore]);
+  }, [onLoadMore, hasMore, containerRef]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -35,5 +35,5 @@ export const useInfiniteScroll = (
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+  }, [handleScroll, containerRef]);
 };

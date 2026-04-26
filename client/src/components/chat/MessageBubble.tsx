@@ -1,9 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Message } from '@/types';
 import { formatMessageTime, getSenderInfo, formatFileSize } from '@/lib/utils';
 import MessageStatus from './MessageStatus';
+import EmojiPicker from './EmojiPicker';
+import { useChatStore } from '@/stores/chatStore';
+import { useAuthStore } from '@/stores/authStore';
 
 interface MessageBubbleProps {
   message: Message;
@@ -16,14 +19,33 @@ export default function MessageBubble({ message, isMine, isConsecutive }: Messag
   const isImage = message.type === 'image' && message.fileUrl;
   const isVideo = message.type === 'video' && message.fileUrl;
   const isFile = message.type === 'file' && message.fileUrl;
+  const isVoice = message.type === 'voice' && message.fileUrl;
+  
+  const [showPicker, setShowPicker] = useState(false);
+  const toggleReaction = useChatStore((s) => s.toggleReaction);
+  const currentUser = useAuthStore((s) => s.user);
+
+  const handleReact = (emoji: string) => {
+    toggleReaction(message._id, message.conversation, emoji);
+    setShowPicker(false);
+  };
 
   return (
     <div
       className={`flex ${isMine ? 'justify-end' : 'justify-start'} ${
         isConsecutive ? 'mt-0.5' : 'mt-3'
       } message-enter`}
+      onMouseEnter={() => setShowPicker(true)}
+      onMouseLeave={() => setShowPicker(false)}
     >
-      <div className={`max-w-[75%] md:max-w-[60%] ${isMine ? 'items-end' : 'items-start'} flex flex-col`}>
+      <div className={`max-w-[75%] md:max-w-[60%] ${isMine ? 'items-end' : 'items-start'} flex flex-col relative group`}>
+        {/* Emoji Picker (shows on hover) */}
+        {showPicker && !message.pending && !message.failed && (
+          <div className={`absolute -top-10 z-10 ${isMine ? 'right-0' : 'left-0'}`}>
+            <EmojiPicker onReact={handleReact} />
+          </div>
+        )}
+
         {/* Sender name for received messages */}
         {!isMine && !isConsecutive && (
           <span className="text-xs text-(--text-muted) mb-1 ml-1 font-medium">
@@ -60,6 +82,27 @@ export default function MessageBubble({ message, isMine, isConsecutive }: Messag
                 src={message.fileUrl}
                 controls
                 className="max-h-64 outline-none max-w-full"
+                preload="metadata"
+              />
+            </div>
+          )}
+
+          {/* Voice message */}
+          {isVoice && (
+            <div className={`flex items-center gap-3 py-1 mb-2 min-w-[200px]`}>
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                isMine ? 'bg-white/20' : 'bg-(--accent)/10'
+              }`}>
+                <svg className={`w-4 h-4 ${isMine ? 'text-white' : 'text-(--accent)'}`} fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+              </div>
+              <audio
+                src={message.fileUrl}
+                controls
+                className="flex-1 h-8 min-w-0"
+                style={{ colorScheme: isMine ? 'dark' : 'light' }}
                 preload="metadata"
               />
             </div>
@@ -102,8 +145,13 @@ export default function MessageBubble({ message, isMine, isConsecutive }: Messag
             </p>
           )}
 
-          {/* Time and status */}
+          {/* Time, pin and status */}
           <div className={`flex items-center gap-1 mt-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
+            {message.isPinned && (
+              <svg className={`w-3 h-3 ${isMine ? 'text-white/50' : 'text-(--accent)'}`} fill="currentColor" viewBox="0 0 24 24">
+                <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/>
+              </svg>
+            )}
             <span className={`text-[10px] ${
               isMine ? 'text-white/50' : 'text-(--text-muted)'
             }`}>
@@ -111,6 +159,33 @@ export default function MessageBubble({ message, isMine, isConsecutive }: Messag
             </span>
             {isMine && <MessageStatus status={message.status} isMine={isMine} />}
           </div>
+
+          {/* Reactions */}
+          {message.reactions && message.reactions.length > 0 && (
+            <div className={`absolute -bottom-4 ${isMine ? 'right-2' : 'left-2'} flex flex-wrap gap-1 z-10`}>
+              {message.reactions.map((r, i) => {
+                const iReacted = currentUser && r.users.includes(currentUser._id);
+                return (
+                  <button
+                    key={`${r.emoji}-${i}`}
+                    onClick={() => handleReact(r.emoji)}
+                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs border cursor-pointer hover:scale-105 transition-transform ${
+                      iReacted
+                        ? isMine 
+                          ? 'bg-(--reaction-bg-mine) border-(--reaction-border-mine) text-white' 
+                          : 'bg-(--reaction-bg) border-(--reaction-border) text-(--text-primary)'
+                        : isMine
+                          ? 'bg-black/20 border-white/10 text-white'
+                          : 'bg-(--bg-secondary) border-(--border) text-(--text-primary)'
+                    }`}
+                  >
+                    <span>{r.emoji}</span>
+                    <span className="font-medium text-[10px] opacity-80">{r.users.length}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

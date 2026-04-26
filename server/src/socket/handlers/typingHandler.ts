@@ -15,18 +15,17 @@ export const setupTypingHandler = (io: Server, socket: AuthenticatedSocket): voi
 
       if (!conversation) return;
 
-      // Emit to the other participant
-      const otherUserId = conversation.participants
-        .find((p) => p.toString() !== socket.userId)
-        ?.toString();
+      // Emit to all other participants
+      conversation.participants.forEach((participantId) => {
+        const pId = participantId.toString();
+        if (pId === socket.userId) return;
 
-      if (otherUserId) {
-        emitToUser(io, otherUserId, 'typing:update', {
+        emitToUser(io, pId, 'typing:update', {
           conversationId,
           userId: socket.userId,
           isTyping: true,
         });
-      }
+      });
     } catch (error) {
       logger.error('Typing start error:', error);
     }
@@ -41,17 +40,17 @@ export const setupTypingHandler = (io: Server, socket: AuthenticatedSocket): voi
 
       if (!conversation) return;
 
-      const otherUserId = conversation.participants
-        .find((p) => p.toString() !== socket.userId)
-        ?.toString();
+      // Emit to all other participants
+      conversation.participants.forEach((participantId) => {
+        const pId = participantId.toString();
+        if (pId === socket.userId) return;
 
-      if (otherUserId) {
-        emitToUser(io, otherUserId, 'typing:update', {
+        emitToUser(io, pId, 'typing:update', {
           conversationId,
           userId: socket.userId,
           isTyping: false,
         });
-      }
+      });
     } catch (error) {
       logger.error('Typing stop error:', error);
     }

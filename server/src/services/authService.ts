@@ -61,6 +61,8 @@ class AuthService {
         email: user.email,
         avatar: user.avatar,
         status: user.status,
+        bio: user.bio,
+        statusMessage: user.statusMessage,
         publicKey: user.publicKey,
         encryptedPrivateKey: user.encryptedPrivateKey,
         keySalt: user.keySalt,
@@ -98,6 +100,8 @@ class AuthService {
         email: user.email,
         avatar: user.avatar,
         status: user.status,
+        bio: user.bio,
+        statusMessage: user.statusMessage,
         publicKey: user.publicKey,
         encryptedPrivateKey: user.encryptedPrivateKey,
         keySalt: user.keySalt,
@@ -212,6 +216,18 @@ class AuthService {
       .limit(20);
 
     return users;
+  }
+
+  async updateProfile(userId: string, data: { bio?: string; statusMessage?: string; avatar?: string }) {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: data },
+      { new: true, runValidators: true }
+    );
+    if (!user) {
+      throw new AppError('User not found.', 404);
+    }
+    return user;
   }
 }
 

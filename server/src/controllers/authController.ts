@@ -91,6 +91,16 @@ class AuthController {
       next(error);
     }
   }
+
+  async updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { bio, statusMessage, avatar } = req.body;
+      const user = await authService.updateProfile(req.user!.userId, { bio, statusMessage, avatar });
+      res.status(200).json(user);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AuthController();

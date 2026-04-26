@@ -12,6 +12,8 @@ export interface IUser {
   publicKey?: string;
   encryptedPrivateKey?: string;
   keySalt?: string;
+  bio?: string;
+  statusMessage?: string;
   passwordResetOTP?: string;
   passwordResetExpires?: Date;
   createdAt: Date;
@@ -21,8 +23,12 @@ export interface IUser {
 
 export interface IConversation {
   _id: Types.ObjectId;
-  type: 'direct';
+  type: 'direct' | 'group';
   participants: Types.ObjectId[];
+  name?: string;
+  avatar?: string;
+  description?: string;
+  admins?: Types.ObjectId[];
   lastMessage?: {
     content: string;
     sender: Types.ObjectId;
@@ -33,8 +39,13 @@ export interface IConversation {
   updatedAt: Date;
 }
 
-export type MessageType = 'text' | 'image' | 'file' | 'video';
+export type MessageType = 'text' | 'image' | 'file' | 'video' | 'voice';
 export type MessageStatus = 'sent' | 'delivered' | 'read';
+
+export interface IReaction {
+  emoji: string;
+  users: Types.ObjectId[];
+}
 
 export interface IMessage {
   _id: Types.ObjectId;
@@ -53,6 +64,8 @@ export interface IMessage {
     user: Types.ObjectId;
     readAt: Date;
   }>;
+  isPinned: boolean;
+  reactions: IReaction[];
   createdAt: Date;
 }
 
@@ -91,4 +104,10 @@ export interface ReadMessagePayload {
 
 export interface JoinConversationPayload {
   conversationId: string;
+}
+
+export interface ReactMessagePayload {
+  messageId: string;
+  conversationId: string;
+  emoji: string;
 }

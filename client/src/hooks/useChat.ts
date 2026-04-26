@@ -7,6 +7,22 @@ export const useTyping = (conversationId: string | undefined) => {
   const typingTimeout = useRef<NodeJS.Timeout | null>(null);
   const isTypingRef = useRef(false);
 
+  const stopTyping = useCallback(() => {
+    if (!conversationId) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      socket.emit('typing:stop', { conversationId });
+    }
+
+    if (typingTimeout.current) {
+      clearTimeout(typingTimeout.current);
+      typingTimeout.current = null;
+    }
+  }, [conversationId]);
+
   const startTyping = useCallback(() => {
     if (!conversationId) return;
     const socket = getSocket();
@@ -26,23 +42,7 @@ export const useTyping = (conversationId: string | undefined) => {
     typingTimeout.current = setTimeout(() => {
       stopTyping();
     }, 2000);
-  }, [conversationId]);
-
-  const stopTyping = useCallback(() => {
-    if (!conversationId) return;
-    const socket = getSocket();
-    if (!socket) return;
-
-    if (isTypingRef.current) {
-      isTypingRef.current = false;
-      socket.emit('typing:stop', { conversationId });
-    }
-
-    if (typingTimeout.current) {
-      clearTimeout(typingTimeout.current);
-      typingTimeout.current = null;
-    }
-  }, [conversationId]);
+  }, [conversationId, stopTyping]);
 
   return { startTyping, stopTyping };
 };

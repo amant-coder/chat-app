@@ -65,7 +65,7 @@ interface ChatState {
   setActiveConversation: (conversation: Conversation | null) => void;
   fetchMessages: (conversationId: string, initial?: boolean) => Promise<void>;
   loadMoreMessages: (conversationId: string) => Promise<void>;
-  sendMessage: (conversationId: string, content: string, type?: string, fileData?: any) => Promise<void>;
+  sendMessage: (conversationId: string, content: string, type?: string, fileData?: { fileUrl: string; fileName: string; fileSize: number; url?: string }) => Promise<void>;
   addMessage: (message: Message, tempId?: string | null) => void;
   updateMessageStatus: (messageId: string, conversationId: string, status: string) => void;
   updateReadReceipt: (conversationId: string, messageIds: string[]) => void;
@@ -73,6 +73,12 @@ interface ChatState {
   updateUserStatus: (userId: string, status: string) => void;
   startConversation: (userId: string) => Promise<Conversation>;
   markAsRead: (conversationId: string) => void;
+  toggleReaction: (messageId: string, conversationId: string, emoji: string) => void;
+  updateMessageReaction: (messageId: string, conversationId: string, reactions: { emoji: string; users: string[] }[]) => void;
+  upsertConversation: (conversation: Conversation) => void;
+  addConversation: (conversation: Conversation) => void;
+  searchMessages: (query: string) => Promise<Message[]>;
+  addGroupParticipant: (conversationId: string, userId: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -277,22 +283,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
         updated = [...existing, decryptedMsg];
       }
 
-      // Update conversation's lastMessage and reorder
+      const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+      const currentUser = userStr ? JSON.parse(userStr) : null;
+      const currentUserId = currentUser?._id;
+
       const updatedConversations = state.conversations.map((conv) => {
         if (conv._id === convId) {
-          const senderInfo = typeof decryptedMsg.sender === 'string'
+          const senderId = typeof decryptedMsg.sender === 'string'
             ? decryptedMsg.sender
             : decryptedMsg.sender._id;
+          
+          const isMe = senderId === currentUserId;
+
           return {
             ...conv,
             lastMessage: {
               content: decryptedMsg.content,
-              sender: senderInfo,
+              sender: senderId,
               timestamp: decryptedMsg.createdAt,
               type: decryptedMsg.type,
             },
             updatedAt: decryptedMsg.createdAt,
-            unreadCount: state.activeConversation?._id === convId
+            unreadCount: (state.activeConversation?._id === convId || isMe)
               ? conv.unreadCount
               : conv.unreadCount + 1,
           };
@@ -412,6 +424,85 @@ export const useChatStore = create<ChatState>((set, get) => ({
           conv._id === conversationId ? { ...conv, unreadCount: 0 } : conv
         ),
       }));
+    }
+  },
+
+  toggleReaction: (messageId, conversationId, emoji) => {
+    const socket = getSocket();
+    if (!socket) return;
+    
+    // Optimistic UI could be implemented here, but for simplicity we rely on the server broadcast
+    socket.emit('message:react', { messageId, conversationId, emoji });
+  },
+
+  updateMessageReaction: (messageId: string, conversationId: string, reactions) => {
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [conversationId]: (state.messages[conversationId] || []).map((m) =>
+          m._id === messageId ? { ...m, reactions } : m
+        ),
+      },
+    }));
+  },
+
+  upsertConversation: (conversation) => {
+    set((state) => {
+      const exists = state.conversations.find((c) => c._id === conversation._id);
+      let updatedConversations: Conversation[];
+
+      if (exists) {
+        // Update existing conversation (e.g. last message, unread count)
+        updatedConversations = state.conversations.map((c) =>
+          c._id === conversation._id ? { ...c, ...conversation } : c
+        );
+      } else {
+        // Add new conversation to the list
+        updatedConversations = [conversation, ...state.conversations];
+      }
+
+      // Re-sort by updatedAt
+      updatedConversations.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+      return { conversations: updatedConversations };
+    });
+  },
+
+  searchMessages: async (query) => {
+    if (!query.trim()) return [];
+    try {
+      const activeConv = get().activeConversation;
+      if (!activeConv) return [];
+      
+      const { data } = await api.get<{ messages: Message[] }>(`/messages/${activeConv._id}/search`, {
+        params: { q: query },
+      });
+      return data.messages;
+    } catch (error) {
+      console.error('Search failed:', error);
+      return [];
+    }
+  },
+
+  addConversation: (conversation) => {
+    set((state) => {
+      // Prevent duplicate conversations
+      const exists = state.conversations.find((c) => c._id === conversation._id);
+      if (exists) return state;
+      return { conversations: [conversation, ...state.conversations] };
+    });
+  },
+
+  addGroupParticipant: async (conversationId, userId) => {
+    try {
+      const { data } = await api.post<Conversation>(`/conversations/groups/${conversationId}/participants`, { userId });
+      set((state) => ({
+        activeConversation: state.activeConversation?._id === data._id ? data : state.activeConversation,
+        conversations: state.conversations.map((c) => (c._id === data._id ? data : c)),
+      }));
+    } catch (error) {
+      console.error('Failed to add group participant:', error);
+      throw error;
     }
   },
 }));

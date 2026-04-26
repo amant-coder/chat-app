@@ -14,7 +14,10 @@ export default function UserSearchModal() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const user = useAuthStore((s) => s.user);
   const setUserSearchOpen = useUIStore((s) => s.setUserSearchOpen);
+  const userSearchMode = useUIStore((s) => s.userSearchMode);
+  const userSearchGroupId = useUIStore((s) => s.userSearchGroupId);
   const startConversation = useChatStore((s) => s.startConversation);
+  const addGroupParticipant = useChatStore((s) => s.addGroupParticipant);
   const setActiveConversation = useChatStore((s) => s.setActiveConversation);
   const fetchMessages = useChatStore((s) => s.fetchMessages);
   const addToast = useUIStore((s) => s.addToast);
@@ -48,12 +51,18 @@ export default function UserSearchModal() {
 
   const handleSelectUser = async (user: User) => {
     try {
-      const conversation = await startConversation(user._id);
-      setActiveConversation(conversation);
-      await fetchMessages(conversation._id);
-      setUserSearchOpen(false);
+      if (userSearchMode === 'add_to_group' && userSearchGroupId) {
+        await addGroupParticipant(userSearchGroupId, user._id);
+        addToast('Participant added successfully', 'success');
+        setUserSearchOpen(false);
+      } else {
+        const conversation = await startConversation(user._id);
+        setActiveConversation(conversation);
+        await fetchMessages(conversation._id);
+        setUserSearchOpen(false);
+      }
     } catch (error: any) {
-      addToast(error.response?.data?.error || 'Failed to start conversation', 'error');
+      addToast(error.response?.data?.error || 'Failed to complete action', 'error');
     }
   };
 
@@ -76,7 +85,9 @@ export default function UserSearchModal() {
         {/* Header */}
         <div className="p-4 border-b border-(--border)">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-(--text-primary)">New Conversation</h2>
+            <h2 className="text-lg font-semibold text-(--text-primary)">
+              {userSearchMode === 'add_to_group' ? 'Add Participant to Group' : 'New Conversation'}
+            </h2>
             <button
               onClick={() => setUserSearchOpen(false)}
               className="p-1.5 rounded-lg hover:bg-(--bg-hover) transition-colors"
