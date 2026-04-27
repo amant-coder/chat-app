@@ -7,9 +7,9 @@ export const generateRSAKeyPair = async () => {
   const keyPair = await window.crypto.subtle.generateKey(
     {
       name: 'RSA-OAEP',
-      modulusLength: 2048,
+      modulusLength: 4096, // Upgraded to 4096-bit for CIA-level security
       publicExponent: new Uint8Array([1, 0, 1]),
-      hash: 'SHA-256',
+      hash: 'SHA-512', // Upgraded to SHA-512
     },
     true, // extractable
     ['encrypt', 'decrypt']
@@ -63,8 +63,8 @@ export const deriveMasterKey = async (password: string, saltString: string) => {
     {
       name: 'PBKDF2',
       salt: saltByteArray as any,
-      iterations: 100000,
-      hash: 'SHA-256',
+      iterations: 600000, // Extremely high iterations for max security
+      hash: 'SHA-512', // Upgraded to SHA-512
     },
     passwordKey,
     { name: 'AES-GCM', length: 256 },

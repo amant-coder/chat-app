@@ -12,6 +12,8 @@ export interface User {
   publicKey?: string;
   encryptedPrivateKey?: string;
   keySalt?: string;
+  isAdmin?: boolean;
+  createdAt?: string;
 }
 
 export type MessageType = 'text' | 'image' | 'file' | 'video' | 'voice';
