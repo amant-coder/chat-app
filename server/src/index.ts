@@ -9,6 +9,7 @@ import { corsOptions } from './config/cors';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
+import { antiProxy } from './middleware/antiProxy';
 import { initializeSocket } from './socket';
 
 // Import routes
@@ -25,11 +26,20 @@ const httpServer = createServer(app);
 const io = initializeSocket(httpServer);
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  xssFilter: true, // Prevents XSS injections
+  noSniff: true    // Prevents MIME-sniffing
+}));
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(mongoSanitize());
+app.use(antiProxy);
 
 // Rate limiting
 app.use('/api', apiLimiter);

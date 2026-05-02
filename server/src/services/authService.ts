@@ -229,6 +229,90 @@ class AuthService {
     }
     return user;
   }
+
+  async getAllUsers() {
+    const users = await User.find({})
+      .select('username email avatar status lastSeen isAdmin createdAt')
+      .sort({ createdAt: -1 });
+    return users;
+  }
+
+  async requestAdminAccess(email: string, password: string) {
+    const user = await User.findOne({ email }).select('+password');
+
+    if (!user) {
+      throw new AppError('Invalid email or password.', 401);
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      throw new AppError('Invalid email or password.', 401);
+    }
+
+    // Generate 5-digit OTP
+    const otp = crypto.randomInt(10000, 99999).toString();
+
+    // Hash the OTP
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    // Store hashed OTP with 5-minute expiry
+    user.set('adminOtp', hashedOtp);
+    user.set('adminOtpExpires', new Date(Date.now() + 5 * 60 * 1000));
+    await user.save({ validateModifiedOnly: true });
+
+    // Send email with plain OTP
+    await emailService.sendAdminAccessEmail(email, user.username, otp);
+
+    logger.info(`Admin access OTP sent to ${email}`);
+
+    return { message: 'OTP sent to your email.' };
+  }
+
+  async verifyAdminAccess(email: string, otp: string) {
+    const user = await User.findOne({ email }).select('+adminOtp +adminOtpExpires');
+
+    if (!user || !user.get('adminOtp') || !user.get('adminOtpExpires')) {
+      throw new AppError('Invalid or expired OTP.', 400);
+    }
+
+    // Check expiry
+    const expires = user.get('adminOtpExpires') as Date;
+    if (new Date() > expires) {
+      user.set('adminOtp', undefined);
+      user.set('adminOtpExpires', undefined);
+      await user.save({ validateModifiedOnly: true });
+      throw new AppError('OTP has expired. Please request a new one.', 400);
+    }
+
+    // Verify OTP
+    const storedHash = user.get('adminOtp') as string;
+    const isValid = await bcrypt.compare(otp, storedHash);
+    if (!isValid) {
+      throw new AppError('Invalid OTP.', 400);
+    }
+
+    // Clear OTP fields
+    user.set('adminOtp', undefined);
+    user.set('adminOtpExpires', undefined);
+    await user.save({ validateModifiedOnly: true });
+
+    // Generate special admin token
+    const payload: JwtPayload = {
+      userId: user._id.toString(),
+      email: user.email,
+    };
+    
+    const adminToken = jwt.sign(
+      { ...payload, role: 'admin' }, 
+      env.JWT_SECRET, 
+      { expiresIn: '1h', algorithm: 'HS256' }
+    );
+
+    logger.info(`Admin access verified for ${email}`);
+
+    return { adminToken };
+  }
 }
 
 export default new AuthService();

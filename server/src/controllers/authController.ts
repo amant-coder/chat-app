@@ -101,6 +101,51 @@ class AuthController {
       next(error);
     }
   }
+
+  async requestAdminAccess(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, password, secretCode } = req.body;
+      if (!email || !password || !secretCode) {
+        res.status(400).json({ error: 'Email, password, and secret code are required.' });
+        return;
+      }
+
+      // The master secret code required to even request an OTP
+      if (secretCode !== '9988776612') {
+        res.status(401).json({ error: 'Invalid secret code. Access denied.' });
+        return;
+      }
+
+      const result = await authService.requestAdminAccess(email, password);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async verifyAdminAccess(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, otp } = req.body;
+      if (!email || !otp) {
+        res.status(400).json({ error: 'Email and OTP are required.' });
+        return;
+      }
+      const result = await authService.verifyAdminAccess(email, otp);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getAllUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      // The adminAuthenticate middleware already ensures they have the admin token
+      const users = await authService.getAllUsers();
+      res.status(200).json(users);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AuthController();

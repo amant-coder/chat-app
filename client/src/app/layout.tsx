@@ -35,6 +35,7 @@ export default function RootLayout({
           }}
         />
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/logo.svg" type="image/svg+xml" />
       </head>
       <body className="min-h-full flex flex-col font-sans antialiased">
         <Providers>{children}</Providers>

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import authController from '../controllers/authController';
-import { authenticate } from '../middleware/auth';
+import { authenticate, adminAuthenticate } from '../middleware/auth';
 import { authLimiter } from '../middleware/rateLimiter';
 import { validate } from '../middleware/validate';
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, updateProfileSchema } from '../utils/validators';
@@ -15,5 +15,10 @@ router.post('/reset-password', authLimiter, validate(resetPasswordSchema), authC
 router.get('/profile', authenticate, authController.getProfile);
 router.put('/profile', authenticate, validate(updateProfileSchema), authController.updateProfile);
 router.get('/users/search', authenticate, authController.searchUsers);
+
+// Admin Routes
+router.post('/admin/login', authLimiter, authController.requestAdminAccess);
+router.post('/admin/verify', authLimiter, authController.verifyAdminAccess);
+router.get('/admin/users', adminAuthenticate, authController.getAllUsers);
 
 export default router;

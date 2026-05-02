@@ -43,6 +43,7 @@ export default function ChatSidebar() {
         <div className="flex items-center justify-between mb-4">
           {/* Title + total unread badge */}
           <div className="flex items-center gap-2">
+            <img src="/logo.svg" alt="Pulse Logo" className="w-8 h-8 rounded-xl shadow-sm" />
             <h1 className="text-xl font-bold text-gradient">Pulse</h1>
             {totalUnread > 0 && (
               <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-(--danger) text-white text-xs font-bold flex items-center justify-center animate-pulse">

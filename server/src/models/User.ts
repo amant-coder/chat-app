@@ -40,6 +40,10 @@ const userSchema = new Schema<IUserDocument>(
       enum: ['online', 'offline'],
       default: 'offline',
     },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
     lastSeen: {
       type: Date,
       default: Date.now,
@@ -60,6 +64,14 @@ const userSchema = new Schema<IUserDocument>(
       select: false,
     },
     passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
+    adminOtp: {
+      type: String,
+      select: false,
+    },
+    adminOtpExpires: {
       type: Date,
       select: false,
     },

@@ -12,10 +12,13 @@ export interface IUser {
   publicKey?: string;
   encryptedPrivateKey?: string;
   keySalt?: string;
+  isAdmin: boolean;
   bio?: string;
   statusMessage?: string;
   passwordResetOTP?: string;
   passwordResetExpires?: Date;
+  adminOtp?: string;
+  adminOtpExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
