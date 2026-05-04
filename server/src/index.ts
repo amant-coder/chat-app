@@ -22,6 +22,10 @@ import uploadRoutes from './routes/uploadRoutes';
 const app = express();
 const httpServer = createServer(app);
 
+// Trust the first reverse-proxy hop (e.g. Render, Heroku, Vercel)
+// This prevents Render's infrastructure headers from being treated as user proxies
+app.set('trust proxy', 1);
+
 // Initialize Socket.IO
 const io = initializeSocket(httpServer);
 

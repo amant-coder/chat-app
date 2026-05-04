@@ -16,7 +16,8 @@ export default function RegisterPage() {
 
   useEffect(() => {
     loadUser();
-  }, [loadUser]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
