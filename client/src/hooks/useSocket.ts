@@ -1,0 +1,99 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { getSocket } from '@/lib/socket';
+import { useChatStore } from '@/stores/chatStore';
+import { useUIStore } from '@/stores/uiStore';
+import { Message } from '@/types';
+
+export const useSocket = () => {
+  const addMessage = useChatStore((s) => s.addMessage);
+  const updateMessageStatus = useChatStore((s) => s.updateMessageStatus);
+  const updateReadReceipt = useChatStore((s) => s.updateReadReceipt);
+  const setTyping = useChatStore((s) => s.setTyping);
+  const updateUserStatus = useChatStore((s) => s.updateUserStatus);
+  const updateMessageReaction = useChatStore((s) => s.updateMessageReaction);
+  const upsertConversation = useChatStore((s) => s.upsertConversation);
+  const deleteMessageLocal = useChatStore((s) => s.deleteMessageLocal);
+  const setConnected = useUIStore((s) => s.setConnected);
+  const activeSocket = useRef<any>(null);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket || activeSocket.current === socket) return;
+
+    activeSocket.current = socket;
+
+    const handleConnect = () => setConnected(true);
+    const handleDisconnect = () => setConnected(false);
+
+    const handleMessageReceived = ({ message, tempId }: { message: Message; tempId: string | null }) => {
+      addMessage(message, tempId);
+    };
+
+    const handleMessageDelivered = ({ messageId, conversationId }: { messageId: string; conversationId: string }) => {
+      updateMessageStatus(messageId, conversationId, 'delivered');
+    };
+
+    const handleMessageDeleted = ({ messageId, conversationId, message }: { messageId: string; conversationId: string; message: Message }) => {
+      deleteMessageLocal(messageId, conversationId, message);
+    };
+
+    const handleReadUpdate = ({ conversationId, messageIds }: { conversationId: string; messageIds: string[] }) => {
+      updateReadReceipt(conversationId, messageIds);
+    };
+
+    const handleTypingUpdate = ({ conversationId, userId, isTyping }: { conversationId: string; userId: string; isTyping: boolean }) => {
+      setTyping(conversationId, userId, isTyping);
+    };
+
+    const handleUserStatus = ({ userId, status }: { userId: string; status: string }) => {
+      updateUserStatus(userId, status);
+    };
+
+    const handleReactionUpdate = ({ messageId, conversationId, reactions }: { messageId: string; conversationId: string; reactions: { emoji: string; users: string[] }[] }) => {
+      updateMessageReaction(messageId, conversationId, reactions);
+    };
+    
+    const handleConversationUpdate = (conversation: any) => {
+      upsertConversation(conversation);
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('message:received', handleMessageReceived);
+    socket.on('message:delivered', handleMessageDelivered);
+    socket.on('message:deleted', handleMessageDeleted);
+    socket.on('message:read:update', handleReadUpdate);
+    socket.on('message:reaction:update', handleReactionUpdate);
+    socket.on('typing:update', handleTypingUpdate);
+    socket.on('user:status', handleUserStatus);
+    socket.on('conversation:update', handleConversationUpdate);
+
+    if (socket.connected) setConnected(true);
+
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('message:received', handleMessageReceived);
+      socket.off('message:delivered', handleMessageDelivered);
+      socket.off('message:deleted', handleMessageDeleted);
+      socket.off('message:read:update', handleReadUpdate);
+      socket.off('message:reaction:update', handleReactionUpdate);
+      socket.off('typing:update', handleTypingUpdate);
+      socket.off('user:status', handleUserStatus);
+      socket.off('conversation:update', handleConversationUpdate);
+      activeSocket.current = null;
+    };
+  }, [
+    addMessage,
+    setConnected,
+    setTyping,
+    updateMessageReaction,
+    updateMessageStatus,
+    updateReadReceipt,
+    updateUserStatus,
+    upsertConversation,
+    deleteMessageLocal,
+  ]);
+};

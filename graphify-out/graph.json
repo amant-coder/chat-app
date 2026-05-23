@@ -1,0 +1,26 @@
+{
+  "nodes": [
+    { "id": "client/src/app/page.tsx", "label": "Main Page", "type": "view" },
+    { "id": "client/src/components/chat/ChatWindow.tsx", "label": "Chat Window", "type": "component" },
+    { "id": "client/src/components/chat/ChatSidebar.tsx", "label": "Chat Sidebar", "type": "component" },
+    { "id": "client/src/stores/chatStore.ts", "label": "Chat Store (Zustand)", "type": "store" },
+    { "id": "client/src/lib/socket.ts", "label": "Socket Client", "type": "lib" },
+    { "id": "client/src/lib/crypto.ts", "label": "E2EE Engine", "type": "lib" },
+    { "id": "server/src/index.ts", "label": "Server Entry", "type": "entry" },
+    { "id": "server/src/socket/index.ts", "label": "Socket Server", "type": "logic" },
+    { "id": "server/src/socket/handlers/messageHandler.ts", "label": "Message Handler", "type": "logic" },
+    { "id": "server/src/models/Message.ts", "label": "Message Model", "type": "model" },
+    { "id": "server/src/services/messageService.ts", "label": "Message Service", "type": "service" }
+  ],
+  "links": [
+    { "source": "client/src/app/page.tsx", "target": "client/src/components/chat/ChatWindow.tsx" },
+    { "source": "client/src/app/page.tsx", "target": "client/src/components/chat/ChatSidebar.tsx" },
+    { "source": "client/src/components/chat/ChatWindow.tsx", "target": "client/src/stores/chatStore.ts" },
+    { "source": "client/src/stores/chatStore.ts", "target": "client/src/lib/socket.ts" },
+    { "source": "client/src/stores/chatStore.ts", "target": "client/src/lib/crypto.ts" },
+    { "source": "server/src/index.ts", "target": "server/src/socket/index.ts" },
+    { "source": "server/src/socket/index.ts", "target": "server/src/socket/handlers/messageHandler.ts" },
+    { "source": "server/src/socket/handlers/messageHandler.ts", "target": "server/src/services/messageService.ts" },
+    { "source": "server/src/services/messageService.ts", "target": "server/src/models/Message.ts" }
+  ]
+}

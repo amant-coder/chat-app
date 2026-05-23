@@ -1,0 +1,413 @@
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
+import User, { IUserDocument } from '../models/User';
+import { env } from '../config/env';
+import { JwtPayload } from '../types';
+import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
+import emailService from './emailService';
+
+class AuthService {
+  generateAccessToken(user: IUserDocument): string {
+    const payload: JwtPayload = {
+      userId: user._id.toString(),
+      email: user.email,
+    };
+    return jwt.sign(payload, env.JWT_SECRET, {
+      expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+      algorithm: 'HS256',
+    });
+  }
+
+  generateRefreshToken(user: IUserDocument): string {
+    const payload: JwtPayload = {
+      userId: user._id.toString(),
+      email: user.email,
+    };
+    return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+      algorithm: 'HS256',
+    });
+  }
+
+  async register(username: string, email: string, password: string, publicKey?: string, encryptedPrivateKey?: string, keySalt?: string) {
+    // Check existing
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }],
+    });
+
+    if (existingUser) {
+      if (existingUser.email === email) {
+        throw new AppError('Email already registered.', 409);
+      }
+      throw new AppError('Username already taken.', 409);
+    }
+
+    const user = await User.create({ username, email, password, publicKey, encryptedPrivateKey, keySalt });
+
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = this.generateRefreshToken(user);
+
+    logger.info(`User registered: ${user.email}`);
+
+    // Send welcome email (fire-and-forget — don't block registration)
+    emailService.sendWelcomeEmail(email, username);
+
+    return {
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        status: user.status,
+        bio: user.bio,
+        statusMessage: user.statusMessage,
+        publicKey: user.publicKey,
+        encryptedPrivateKey: user.encryptedPrivateKey,
+        keySalt: user.keySalt,
+        fullName: user.get('fullName') || '',
+        authProvider: user.get('authProvider') || 'local',
+      },
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async login(email: string, password: string) {
+    const user = await User.findOne({ email }).select('+password +encryptedPrivateKey +keySalt');
+
+    if (!user) {
+      throw new AppError('Invalid email or password.', 401);
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      throw new AppError('Invalid email or password.', 401);
+    }
+
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = this.generateRefreshToken(user);
+
+    // Update status
+    user.status = 'online';
+    await user.save();
+
+    logger.info(`User logged in: ${user.email}`);
+
+    return {
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        status: user.status,
+        bio: user.bio,
+        statusMessage: user.statusMessage,
+        publicKey: user.publicKey,
+        encryptedPrivateKey: user.encryptedPrivateKey,
+        keySalt: user.keySalt,
+        fullName: user.get('fullName') || '',
+        authProvider: user.get('authProvider') || 'local',
+      },
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async refreshToken(token: string) {
+    try {
+      const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET) as JwtPayload;
+      const user = await User.findById(decoded.userId);
+
+      if (!user) {
+        throw new AppError('User not found.', 404);
+      }
+
+      const accessToken = this.generateAccessToken(user);
+      const refreshToken = this.generateRefreshToken(user);
+
+      return { accessToken, refreshToken };
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new AppError('Refresh token expired. Please login again.', 401);
+      }
+      throw new AppError('Invalid refresh token.', 401);
+    }
+  }
+
+  async forgotPassword(email: string) {
+    // Always return generic message to prevent email enumeration
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Don't reveal whether the email exists
+      return { message: 'If this email is registered, you will receive a reset code shortly.' };
+    }
+
+    // Generate 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    // Hash the OTP before storing
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    // Store hashed OTP with 10-minute expiry
+    user.set('passwordResetOTP', hashedOtp);
+    user.set('passwordResetExpires', new Date(Date.now() + 10 * 60 * 1000));
+    await user.save({ validateModifiedOnly: true });
+
+    // Send email with plain OTP
+    await emailService.sendPasswordResetEmail(email, user.username, otp);
+
+    logger.info(`Password reset OTP sent to ${email}`);
+
+    return { message: 'If this email is registered, you will receive a reset code shortly.' };
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    const user = await User.findOne({ email })
+      .select('+passwordResetOTP +passwordResetExpires');
+
+    if (!user || !user.get('passwordResetOTP') || !user.get('passwordResetExpires')) {
+      throw new AppError('Invalid or expired reset code.', 400);
+    }
+
+    // Check expiry
+    const expires = user.get('passwordResetExpires') as Date;
+    if (new Date() > expires) {
+      // Clear expired OTP
+      user.set('passwordResetOTP', undefined);
+      user.set('passwordResetExpires', undefined);
+      await user.save({ validateModifiedOnly: true });
+      throw new AppError('Reset code has expired. Please request a new one.', 400);
+    }
+
+    // Verify OTP
+    const storedHash = user.get('passwordResetOTP') as string;
+    const isValid = await bcrypt.compare(otp, storedHash);
+    if (!isValid) {
+      throw new AppError('Invalid reset code.', 400);
+    }
+
+    // Update password and clear OTP fields
+    user.password = newPassword;
+    user.set('passwordResetOTP', undefined);
+    user.set('passwordResetExpires', undefined);
+    await user.save(); // This triggers the pre-save hook to hash the new password
+
+    logger.info(`Password reset successful for ${email}`);
+
+    return { message: 'Password reset successfully. You can now log in with your new password.' };
+  }
+
+  async getProfile(userId: string) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new AppError('User not found.', 404);
+    }
+    return user;
+  }
+
+  async searchUsers(query: string, currentUserId: string) {
+    const users = await User.find({
+      _id: { $ne: currentUserId },
+      $or: [
+        { username: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } },
+      ],
+    })
+      .select('username email avatar status lastSeen publicKey')
+      .limit(20);
+
+    return users;
+  }
+
+  async updateProfile(userId: string, data: { bio?: string; statusMessage?: string; avatar?: string }) {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: data },
+      { new: true, runValidators: true }
+    );
+    if (!user) {
+      throw new AppError('User not found.', 404);
+    }
+    return user;
+  }
+
+  async socialLogin(
+    email: string,
+    username: string,
+    publicKey?: string,
+    encryptedPrivateKey?: string,
+    keySalt?: string,
+    backupPin?: string,
+    avatar?: string,
+    fullName?: string,
+    authProvider?: string,
+    clerkUserId?: string
+  ) {
+    let user = await User.findOne({ email }).select('+encryptedPrivateKey +keySalt +backupPin');
+
+    if (!user) {
+      // User is registering with social login
+      // We generate a random password since password field is required
+      const password = crypto.randomBytes(16).toString('hex');
+      user = await User.create({
+        username,
+        email,
+        password,
+        publicKey,
+        encryptedPrivateKey,
+        keySalt,
+        backupPin,
+        fullName: fullName || '',
+        authProvider: authProvider || 'google',
+        clerkUserId,
+        ...(avatar ? { avatar } : {}),
+      });
+    } else {
+      // User already exists, if they sent new key details, save them
+      if (publicKey && encryptedPrivateKey && keySalt) {
+        user.publicKey = publicKey;
+        user.encryptedPrivateKey = encryptedPrivateKey;
+        user.keySalt = keySalt;
+        if (backupPin) {
+          user.backupPin = backupPin;
+        }
+      }
+      if (fullName) {
+        user.set('fullName', fullName);
+      }
+      if (authProvider) {
+        user.set('authProvider', authProvider);
+      }
+      if (clerkUserId) {
+        user.set('clerkUserId', clerkUserId);
+      }
+      await user.save();
+    }
+
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = this.generateRefreshToken(user);
+
+    user.status = 'online';
+    await user.save();
+
+    return {
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        status: user.status,
+        bio: user.bio,
+        statusMessage: user.statusMessage,
+        publicKey: user.publicKey,
+        encryptedPrivateKey: user.encryptedPrivateKey,
+        keySalt: user.keySalt,
+        fullName: user.get('fullName') || '',
+        authProvider: user.get('authProvider') || 'local',
+        clerkUserId: user.get('clerkUserId'),
+      },
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async getAllUsers() {
+    const users = await User.find({})
+      .select('username email avatar status lastSeen isAdmin backupPin createdAt fullName authProvider')
+      .sort({ createdAt: -1 });
+    return users;
+  }
+
+  async requestAdminAccess(email: string, password: string) {
+    const user = await User.findOne({ email }).select('+password');
+
+    if (!user) {
+      throw new AppError('Invalid email or password.', 401);
+    }
+
+    if (!user.isAdmin) {
+      throw new AppError('Access denied. Administrator privileges required.', 403);
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      throw new AppError('Invalid email or password.', 401);
+    }
+
+    // Generate 5-digit OTP
+    const otp = crypto.randomInt(10000, 99999).toString();
+
+    // Hash the OTP
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    // Store hashed OTP with 5-minute expiry
+    user.set('adminOtp', hashedOtp);
+    user.set('adminOtpExpires', new Date(Date.now() + 5 * 60 * 1000));
+    await user.save({ validateModifiedOnly: true });
+
+    // Print OTP in development/server console for easy access
+    console.log(`\n🔑 [ADMIN ACCESS SECURITY OTP] Email: ${email} | OTP: ${otp}\n`);
+
+    // Send email with plain OTP
+    await emailService.sendAdminAccessEmail(email, user.username, otp);
+
+    logger.info(`Admin access OTP sent to ${email}`);
+
+    return { message: 'OTP sent to your email.' };
+  }
+
+  async verifyAdminAccess(email: string, otp: string) {
+    const user = await User.findOne({ email }).select('+adminOtp +adminOtpExpires');
+
+    if (!user || !user.get('adminOtp') || !user.get('adminOtpExpires')) {
+      throw new AppError('Invalid or expired OTP.', 400);
+    }
+
+    if (!user.isAdmin) {
+      throw new AppError('Access denied. Administrator privileges required.', 403);
+    }
+
+    // Check expiry
+    const expires = user.get('adminOtpExpires') as Date;
+    if (new Date() > expires) {
+      user.set('adminOtp', undefined);
+      user.set('adminOtpExpires', undefined);
+      await user.save({ validateModifiedOnly: true });
+      throw new AppError('OTP has expired. Please request a new one.', 400);
+    }
+
+    // Verify OTP
+    const storedHash = user.get('adminOtp') as string;
+    const isValid = await bcrypt.compare(otp, storedHash);
+    if (!isValid) {
+      throw new AppError('Invalid OTP.', 400);
+    }
+
+    // Clear OTP fields
+    user.set('adminOtp', undefined);
+    user.set('adminOtpExpires', undefined);
+    await user.save({ validateModifiedOnly: true });
+
+    // Generate special admin token
+    const payload: JwtPayload = {
+      userId: user._id.toString(),
+      email: user.email,
+    };
+    
+    const adminToken = jwt.sign(
+      { ...payload, role: 'admin' }, 
+      env.JWT_SECRET, 
+      { expiresIn: '1h', algorithm: 'HS256' }
+    );
+
+    logger.info(`Admin access verified for ${email}`);
+
+    return { adminToken };
+  }
+}
+
+export default new AuthService();
