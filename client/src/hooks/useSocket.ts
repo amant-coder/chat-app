@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { Socket } from 'socket.io-client';
 import { getSocket } from '@/lib/socket';
 import { useChatStore } from '@/stores/chatStore';
 import { useUIStore } from '@/stores/uiStore';
-import { Message } from '@/types';
+import { Message, Conversation } from '@/types';
 
 export const useSocket = () => {
   const addMessage = useChatStore((s) => s.addMessage);
@@ -16,7 +17,7 @@ export const useSocket = () => {
   const upsertConversation = useChatStore((s) => s.upsertConversation);
   const deleteMessageLocal = useChatStore((s) => s.deleteMessageLocal);
   const setConnected = useUIStore((s) => s.setConnected);
-  const activeSocket = useRef<any>(null);
+  const activeSocket = useRef<Socket | null>(null);
 
   useEffect(() => {
     const socket = getSocket();
@@ -35,8 +36,8 @@ export const useSocket = () => {
       updateMessageStatus(messageId, conversationId, 'delivered');
     };
 
-    const handleMessageDeleted = ({ messageId, conversationId, message }: { messageId: string; conversationId: string; message: Message }) => {
-      deleteMessageLocal(messageId, conversationId, message);
+    const handleMessageDeleted = ({ messageId, conversationId }: { messageId: string; conversationId: string; message?: Message }) => {
+      deleteMessageLocal(messageId, conversationId);
     };
 
     const handleReadUpdate = ({ conversationId, messageIds }: { conversationId: string; messageIds: string[] }) => {
@@ -55,7 +56,7 @@ export const useSocket = () => {
       updateMessageReaction(messageId, conversationId, reactions);
     };
     
-    const handleConversationUpdate = (conversation: any) => {
+    const handleConversationUpdate = (conversation: Conversation) => {
       upsertConversation(conversation);
     };
 
